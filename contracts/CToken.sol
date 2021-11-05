@@ -1264,6 +1264,23 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         return uint(Error.NO_ERROR);
     }
 
+    function _setSharedReserve(address newSharedReserve) external returns (uint) {
+        // Check caller is admin
+        if (!hasAdminRights()) {
+            return fail(Error.UNAUTHORIZED, FailureInfo.SET_SHARED_RESERVE_OWNER_CHECK);
+        }
+
+        // Ensure invoke comptroller.isComptroller() returns true
+        require(newSharedReserve != address(0), "address cannot be 0");
+
+        sharedReserve = newSharedReserve;
+
+        // Emit NewSharedReserve(oldSharedReserve, newSharedReserve)
+        //emit NewSharedReserve(address(0), newSharedReserve);
+
+        return uint(Error.NO_ERROR);
+    }
+
     /**
       * @notice accrues interest and sets a new admin fee for the protocol using _setAdminFeeFresh
       * @dev Admin function to accrue interest and set a new admin fee
