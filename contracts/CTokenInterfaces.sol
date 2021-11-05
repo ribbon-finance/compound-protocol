@@ -158,6 +158,16 @@ contract CTokenStorage is CTokenAdminStorage {
      * @notice Mapping of account addresses to outstanding borrow balances
      */
     mapping(address => BorrowSnapshot) internal accountBorrows;
+
+    /**
+     * @notice Underlying asset for this CToken
+     */
+    address public underlying;
+
+    /**
+    * @notice Shared reserve contract for this cToken
+    */
+    address public sharedReserve;
 }
 
 contract CTokenInterface is CTokenStorage {
@@ -309,14 +319,7 @@ contract CTokenInterface is CTokenStorage {
     function _setInterestRateModel(InterestRateModel newInterestRateModel) public returns (uint);
 }
 
-contract CErc20Storage {
-    /**
-     * @notice Underlying asset for this CToken
-     */
-    address public underlying;
-}
-
-contract CErc20Interface is CErc20Storage {
+contract CErc20Interface {
 
     /*** User Interface ***/
 
@@ -334,7 +337,7 @@ contract CErc20Interface is CErc20Storage {
     function _addReserves(uint addAmount) external returns (uint);
 }
 
-contract CEtherInterface is CErc20Storage {
+contract CEtherInterface {
     /**
      * @notice Indicator that this is a CEther contract (for inspection)
      */
