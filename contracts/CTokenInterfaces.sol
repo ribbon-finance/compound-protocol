@@ -243,6 +243,11 @@ contract CTokenInterface is CTokenStorage {
     event NewComptroller(ComptrollerInterface oldComptroller, ComptrollerInterface newComptroller);
 
     /**
+    * @notice Event emitted when shared reserve is changed
+    */
+    event NewSharedReserve(address oldSharedReserve, address newSharedReserve);
+
+    /**
      * @notice Event emitted when interestRateModel is changed
      */
     event NewMarketInterestRateModel(InterestRateModel oldInterestRateModel, InterestRateModel newInterestRateModel);
