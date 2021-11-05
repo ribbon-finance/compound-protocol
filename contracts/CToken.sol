@@ -1273,10 +1273,11 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         // Ensure invoke comptroller.isComptroller() returns true
         require(newSharedReserve != address(0), "address cannot be 0");
 
+        address oldSharedReserve = sharedReserve;
         sharedReserve = newSharedReserve;
 
         // Emit NewSharedReserve(oldSharedReserve, newSharedReserve)
-        //emit NewSharedReserve(address(0), newSharedReserve);
+        emit NewSharedReserve(oldSharedReserve, newSharedReserve);
 
         return uint(Error.NO_ERROR);
     }
