@@ -481,15 +481,19 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return failOpaque(Error.MATH_ERROR, FailureInfo.ACCRUE_INTEREST_NEW_BORROW_INDEX_CALCULATION_FAILED, uint(mathErr));
         }
 
-        /////////////////////////
-        // EFFECTS & INTERACTIONS
-        // (No safe failures beyond this point)
+        // If a Shared Reserve contract has been set, transfer tokens to it
+        if(sharedReserve != address(0)){
+            doTransferOut(sharedReserve, totalReservesNew); 
+        } else {
+            // Otherwise, update the totalReserves value
+            totalReserves = totalReservesNew;
+        }
+       
 
         /* We write the previously calculated values into storage */
         accrualBlockNumber = currentBlockNumber;
         borrowIndex = borrowIndexNew;
         totalBorrows = totalBorrowsNew;
-        totalReserves = totalReservesNew;
         totalFuseFees = totalFuseFeesNew;
         totalAdminFees = totalAdminFeesNew;
 
@@ -1264,7 +1268,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         return uint(Error.NO_ERROR);
     }
 
-    function _setSharedReserve(address newSharedReserve) external returns (uint) {
+    function _setSharedReserve(address payable newSharedReserve) external returns (uint) {
         // Check caller is admin
         if (!hasAdminRights()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SET_SHARED_RESERVE_OWNER_CHECK);
