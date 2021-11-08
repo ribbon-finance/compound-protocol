@@ -167,7 +167,7 @@ contract CTokenStorage is CTokenAdminStorage {
     /**
     * @notice Shared reserve contract for this cToken
     */
-    address public sharedReserve;
+    address payable public sharedReserve;
 }
 
 contract CTokenInterface is CTokenStorage {
