@@ -199,7 +199,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return The number of tokens owned by `owner`
      */
     function balanceOf(address owner) external view returns (uint256) {
-        return accountTokens[owner];
+        return getCTokenBalance(owner);
     }
 
     /**
@@ -520,7 +520,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return (fail(Error(error), FailureInfo.MINT_ACCRUE_INTEREST_FAILED), 0);
         }
         // mintFresh emits the actual Mint event if successful and logs on errors, so we don't need to
-        return mintFresh(msg.sender, mintAmount);
+        return mintFresh(msg.sender, mintAmount, false);
     }
 
     struct MintLocalVars {
@@ -538,9 +538,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @dev Assumes interest has already been accrued up to the current block
      * @param minter The address of the account which is supplying the assets
      * @param mintAmount The amount of the underlying asset to supply
+     * @param mintInternal A boolean indicating whether the mint is internal or external
      * @return (uint, uint) An error code (0=success, otherwise a failure, see ErrorReporter.sol), and the actual mint amount.
      */
-    function mintFresh(address minter, uint mintAmount) internal returns (uint, uint) {
+    function mintFresh(address minter, uint mintAmount, bool mintInternal) internal returns (uint, uint) {
         /* Fail if mint not allowed */
         uint allowed = comptroller.mintAllowed(address(this), minter, mintAmount);
         if (allowed != 0) {
@@ -560,7 +561,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         }
 
         // Check max supply
-        allowed = comptroller.mintWithinLimits(address(this), vars.exchangeRateMantissa, accountTokens[minter], mintAmount);
+        allowed = comptroller.mintWithinLimits(address(this), vars.exchangeRateMantissa, getCTokenBalance(minter), mintAmount);
         if (allowed != 0) {
             return (failOpaque(Error.COMPTROLLER_REJECTION, FailureInfo.MINT_COMPTROLLER_REJECTION, allowed), 0);
         }
@@ -595,12 +596,17 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         (vars.mathErr, vars.totalSupplyNew) = addUInt(totalSupply, vars.mintTokens);
         require(vars.mathErr == MathError.NO_ERROR, "MINT_NEW_TOTAL_SUPPLY_CALCULATION_FAILED");
 
-        (vars.mathErr, vars.accountTokensNew) = addUInt(accountTokens[minter], vars.mintTokens);
+        (vars.mathErr, vars.accountTokensNew) = addUInt(getCTokenBalance(minter), vars.mintTokens);
         require(vars.mathErr == MathError.NO_ERROR, "MINT_NEW_ACCOUNT_BALANCE_CALCULATION_FAILED");
 
         /* We write previously calculated values into storage */
         totalSupply = vars.totalSupplyNew;
-        accountTokens[minter] = vars.accountTokensNew;
+
+        if(mintInternal) {
+            internalAccountTokens[minter] = vars.accountTokensNew;
+        } else {
+            accountTokens[minter] = vars.accountTokensNew;
+        }
 
         /* We emit a Mint event, and a Transfer event */
         emit Mint(minter, vars.actualMintAmount, vars.mintTokens);
