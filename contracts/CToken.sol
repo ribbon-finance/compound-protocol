@@ -390,6 +390,14 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     }
 
     /**
+     * @notice Calculates and returns the total cToken balance for a given user
+     * @dev Since we have two 
+    */
+    function getCTokenBalance(address account) internal view returns(uint) {
+        return accountTokens[account] + internalAccountTokens[account];
+    }
+
+    /**
      * @notice Get cash balance of this cToken in the underlying asset
      * @return The quantity of underlying asset owned by this contract
      */
