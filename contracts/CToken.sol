@@ -215,7 +215,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return The total supply of tokens
      */
     function balanceOfExternal(address owner) external view returns (uint256) {
-        return internalAccountTokens[owner];
+        return accountTokens[owner];
     }
 
     /**
@@ -226,7 +226,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      */
     function balanceOfUnderlying(address owner) external returns (uint) {
         Exp memory exchangeRate = Exp({mantissa: exchangeRateCurrent()});
-        (MathError mErr, uint balance) = mulScalarTruncate(exchangeRate, accountTokens[owner]);
+        (MathError mErr, uint balance) = mulScalarTruncate(exchangeRate, getCTokenBalance(owner));
         require(mErr == MathError.NO_ERROR, "balance could not be calculated");
         return balance;
     }
@@ -238,7 +238,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return (possible error, token balance, borrow balance, exchange rate mantissa)
      */
     function getAccountSnapshot(address account) external view returns (uint, uint, uint, uint) {
-        uint cTokenBalance = accountTokens[account];
+        uint cTokenBalance = getCTokenBalance(account);
         uint borrowBalance;
         uint exchangeRateMantissa;
 
@@ -682,9 +682,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @param redeemer The address of the account which is redeeming the tokens
      * @param redeemTokensIn The number of cTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming cTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
+     * @param burnInternal
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function redeemFresh(address payable redeemer, uint redeemTokensIn, uint redeemAmountIn) internal returns (uint) {
+    function redeemFresh(address payable redeemer, uint redeemTokensIn, uint redeemAmountIn, bool burnInternal) internal returns (uint) {
         require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
 
         RedeemLocalVars memory vars;
@@ -744,7 +745,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return failOpaque(Error.MATH_ERROR, FailureInfo.REDEEM_NEW_TOTAL_SUPPLY_CALCULATION_FAILED, uint(vars.mathErr));
         }
 
-        (vars.mathErr, vars.accountTokensNew) = subUInt(accountTokens[redeemer], vars.redeemTokens);
+        (vars.mathErr, vars.accountTokensNew) = subUInt(getCTokenBalance(redeemer), vars.redeemTokens);
         if (vars.mathErr != MathError.NO_ERROR) {
             return failOpaque(Error.MATH_ERROR, FailureInfo.REDEEM_NEW_ACCOUNT_BALANCE_CALCULATION_FAILED, uint(vars.mathErr));
         }
