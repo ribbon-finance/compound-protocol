@@ -203,6 +203,22 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     }
 
     /**
+     * @notice Get the total supply of tokens
+     * @return The total supply of tokens
+     */
+    function balanceOfInternal(address owner) external view returns (uint256) {
+        return internalAccountTokens[owner];
+    }
+
+    /**
+     * @notice Get the total supply of tokens
+     * @return The total supply of tokens
+     */
+    function balanceOfExternal(address owner) external view returns (uint256) {
+        return internalAccountTokens[owner];
+    }
+
+    /**
      * @notice Get the underlying balance of the `owner`
      * @dev This also accrues interest in a transaction
      * @param owner The address of the account to query
