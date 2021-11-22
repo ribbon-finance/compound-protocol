@@ -647,7 +647,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return fail(Error(error), FailureInfo.REDEEM_ACCRUE_INTEREST_FAILED);
         }
         // redeemFresh emits redeem-specific logs on errors, so we don't need to
-        return redeemFresh(msg.sender, redeemTokens, 0);
+        return redeemFresh(msg.sender, redeemTokens, 0, false);
     }
 
     /**
@@ -663,7 +663,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
             return fail(Error(error), FailureInfo.REDEEM_ACCRUE_INTEREST_FAILED);
         }
         // redeemFresh emits redeem-specific logs on errors, so we don't need to
-        return redeemFresh(msg.sender, 0, redeemAmount);
+        return redeemFresh(msg.sender, 0, redeemAmount, false);
     }
 
     struct RedeemLocalVars {
@@ -769,7 +769,13 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         /* We write previously calculated values into storage */
         totalSupply = vars.totalSupplyNew;
-        accountTokens[redeemer] = vars.accountTokensNew;
+
+        if(burnInternal) {
+            internalAccountTokens[redeemer] = vars.accountTokensNew;
+        } else {
+            accountTokens[redeemer] = vars.accountTokensNew;
+        }
+
 
         /* We emit a Transfer event, and a Redeem event */
         emit Transfer(redeemer, address(this), vars.redeemTokens);
