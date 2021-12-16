@@ -32,6 +32,7 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
 
         // Migrate old sOHM to gOHM, set underlying as gOHM, and set cToken name and symbol (replacing "sOHM" with "gOHM")
         if (underlying == MIGRATOR.oldsOHM()) {
+            _callOptionalReturn(abi.encodeWithSelector(EIP20NonStandardInterface(underlying).approve.selector, address(MIGRATOR), uint256(-1)), "TOKEN_APPROVAL_FAILED");
             MIGRATOR.migrate(EIP20Interface(underlying).balanceOf(address(this)), OlympusTokenMigrator.TYPE.STAKED, OlympusTokenMigrator.TYPE.WRAPPED);
             underlying = MIGRATOR.gOHM();
             (string memory _name, string memory _symbol) = abi.decode(data, (string, string));
