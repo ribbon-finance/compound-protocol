@@ -92,6 +92,18 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
     }
 
     /**
+     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
+     * on the return value: the return value is optional (but if data is returned, it must not be false).
+     * Copied from `CErc20.sol`.
+     * @param data The call data (encoded using abi.encode or one of its variants).
+     * @param errorMessage The revert string to return on failure.
+     */
+    function _callOptionalReturn(bytes memory data, string memory errorMessage) internal {
+        bytes memory returndata = _functionCall(underlying, data, errorMessage);
+        if (returndata.length > 0) require(abi.decode(returndata, (bool)), errorMessage);
+    }
+
+    /**
      * @dev Performs a Solidity function call using a low level `call`. A
      * plain `call` is an unsafe replacement for a function call: use this
      * function instead.
@@ -99,6 +111,7 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
      * function (like regular Solidity function calls).
      * Returns the raw returned data. To convert to the expected return value,
      * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+     * Copied from `CErc20.sol`.
      * @param data The call data (encoded using abi.encode or one of its variants).
      * @param errorMessage The revert string to return on failure.
      */
