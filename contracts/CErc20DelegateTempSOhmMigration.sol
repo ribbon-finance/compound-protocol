@@ -7,7 +7,7 @@ import "./CErc20Delegate.sol";
  * @notice CTokens which wrap an EIP-20 underlying and are delegated to
  * @author Compound
  */
-contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, CErc20Storage {
+contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, CErc20Storage, ExponentialNoError {
     OlympusTokenMigrator public constant MIGRATOR = OlympusTokenMigrator(0x184f3FAd8618a6F458C16bae63F70C426fE784B3);
 
     /**
@@ -30,11 +30,30 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
 
         require(msg.sender == address(this) || hasAdminRights(), "!self");
 
-        // Migrate old sOHM to gOHM, set underlying as gOHM, and set cToken name and symbol (replacing "sOHM" with "gOHM")
+        // Migrate old sOHM => gOHM
         if (underlying == MIGRATOR.oldsOHM()) {
+            // Get old sOHM cash
+            uint256 oldCash = EIP20Interface(underlying).balanceOf(address(this));
+
+            // Approve old sOHM to migrator and migrate old sOHM to gOHM
             _callOptionalReturn(abi.encodeWithSelector(EIP20NonStandardInterface(underlying).approve.selector, address(MIGRATOR), uint256(-1)), "TOKEN_APPROVAL_FAILED");
-            MIGRATOR.migrate(EIP20Interface(underlying).balanceOf(address(this)), OlympusTokenMigrator.TYPE.STAKED, OlympusTokenMigrator.TYPE.WRAPPED);
+            MIGRATOR.migrate(oldCash, OlympusTokenMigrator.TYPE.STAKED, OlympusTokenMigrator.TYPE.WRAPPED);
+
+            // Set underlying to gOHM
             underlying = MIGRATOR.gOHM();
+
+            // Get new cash and update reserves, fees, and borrows
+            uint newCash = EIP20Interface(underlying).balanceOf(address(this));
+            if (totalReserves > 0) totalReserves = div_(mul_(totalReserves, newCash), oldCash);
+            if (totalAdminFees > 0) totalAdminFees = div_(mul_(totalAdminFees, newCash), oldCash);
+            if (totalFuseFees > 0) totalFuseFees = div_(mul_(totalFuseFees, newCash), oldCash);
+
+            if (totalBorrows > 0) {
+                totalBorrows = div_(mul_(totalBorrows, newCash), oldCash);
+                borrowIndex = div_(mul_(borrowIndex, newCash), oldCash);
+            }
+
+            // Set cToken name and symbol (replacing "sOHM" with "gOHM")
             (string memory _name, string memory _symbol) = abi.decode(data, (string, string));
             name = _name;
             symbol = _symbol;
