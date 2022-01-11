@@ -44,7 +44,7 @@ contract CErc20DelegateTempTokenMigration is CDelegateInterface, CTokenStorage, 
 
         // Get new cash and update reserves, fees, and borrows
         uint newCash = EIP20Interface(underlying).balanceOf(address(this));
-        require(EIP20Interface(underlying).balanceOf(address(this)) == 0, "No new cash found.");
+        require(EIP20Interface(underlying).balanceOf(address(this)) > 0, "No new cash found.");
         if (totalReserves > 0) totalReserves = div_(mul_(totalReserves, newCash), oldCash);
         if (totalAdminFees > 0) totalAdminFees = div_(mul_(totalAdminFees, newCash), oldCash);
         if (totalFuseFees > 0) totalFuseFees = div_(mul_(totalFuseFees, newCash), oldCash);
