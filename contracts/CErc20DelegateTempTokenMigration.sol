@@ -7,9 +7,7 @@ import "./CErc20Delegate.sol";
  * @notice CTokens which wrap an EIP-20 underlying and are delegated to
  * @author Compound
  */
-contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, CErc20Storage, ExponentialNoError {
-    OlympusTokenMigrator public constant MIGRATOR = OlympusTokenMigrator(0x184f3FAd8618a6F458C16bae63F70C426fE784B3);
-
+contract CErc20DelegateTempTokenMigration is CDelegateInterface, CTokenStorage, CErc20Storage, ExponentialNoError {
     /**
      * @notice Construct an empty delegate
      */
@@ -30,34 +28,35 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
 
         require(msg.sender == address(this) || hasAdminRights(), "!self");
 
-        // Migrate old sOHM => gOHM
-        if (underlying == MIGRATOR.oldsOHM()) {
-            // Get old sOHM cash
-            uint256 oldCash = EIP20Interface(underlying).balanceOf(address(this));
+        // Get old cash
+        uint256 oldCash = EIP20Interface(underlying).balanceOf(address(this));
 
-            // Approve old sOHM to migrator and migrate old sOHM to gOHM
-            _callOptionalReturn(abi.encodeWithSelector(EIP20NonStandardInterface(underlying).approve.selector, address(MIGRATOR), uint256(-1)), "TOKEN_APPROVAL_FAILED");
-            MIGRATOR.migrate(oldCash, OlympusTokenMigrator.TYPE.STAKED, OlympusTokenMigrator.TYPE.WRAPPED);
+        // Approve old underlying to migrator and migrate old underlying to new underlying
+        (address migrator, bytes memory migrationData, address newUnderlying, string memory _name, string memory _symbol) = abi.decode(data, (address, bytes, address, string, string));
+        if (underlying != migrator) _callOptionalReturn(abi.encodeWithSelector(EIP20NonStandardInterface(underlying).approve.selector, migrator, uint256(-1)), "TOKEN_APPROVAL_FAILED");
+        _functionCall(migrator, migrationData, "Failed to call migration function.");
+        
+        // Make sure all was migrated
+        require(EIP20Interface(underlying).balanceOf(address(this)) == 0, "Not all cash was migrated.");
 
-            // Set underlying to gOHM
-            underlying = MIGRATOR.gOHM();
+        // Set new underlying
+        underlying = newUnderlying;
 
-            // Get new cash and update reserves, fees, and borrows
-            uint newCash = EIP20Interface(underlying).balanceOf(address(this));
-            if (totalReserves > 0) totalReserves = div_(mul_(totalReserves, newCash), oldCash);
-            if (totalAdminFees > 0) totalAdminFees = div_(mul_(totalAdminFees, newCash), oldCash);
-            if (totalFuseFees > 0) totalFuseFees = div_(mul_(totalFuseFees, newCash), oldCash);
+        // Get new cash and update reserves, fees, and borrows
+        uint newCash = EIP20Interface(underlying).balanceOf(address(this));
+        require(EIP20Interface(underlying).balanceOf(address(this)) == 0, "No new cash found.");
+        if (totalReserves > 0) totalReserves = div_(mul_(totalReserves, newCash), oldCash);
+        if (totalAdminFees > 0) totalAdminFees = div_(mul_(totalAdminFees, newCash), oldCash);
+        if (totalFuseFees > 0) totalFuseFees = div_(mul_(totalFuseFees, newCash), oldCash);
 
-            if (totalBorrows > 0) {
-                totalBorrows = div_(mul_(totalBorrows, newCash), oldCash);
-                borrowIndex = div_(mul_(borrowIndex, newCash), oldCash);
-            }
-
-            // Set cToken name and symbol (replacing "sOHM" with "gOHM")
-            (string memory _name, string memory _symbol) = abi.decode(data, (string, string));
-            name = _name;
-            symbol = _symbol;
+        if (totalBorrows > 0) {
+            totalBorrows = div_(mul_(totalBorrows, newCash), oldCash);
+            borrowIndex = div_(mul_(borrowIndex, newCash), oldCash);
         }
+
+        // Set new cToken name and symbol
+        name = _name;
+        symbol = _symbol;
     }
 
     /**
@@ -167,22 +166,4 @@ contract CErc20DelegateTempSOhmMigration is CDelegateInterface, CTokenStorage, C
         ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
         return (msg.sender == comptrollerStorage.admin() && comptrollerStorage.adminHasRights()) || (msg.sender == address(fuseAdmin) && comptrollerStorage.fuseAdminHasRights());
     }
-}
-
-interface OlympusTokenMigrator {
-    function gOHM() external view returns (address);
-    function oldsOHM() external view returns (address);
-
-    enum TYPE {
-        UNSTAKED,
-        STAKED,
-        WRAPPED
-    }
-
-    // migrate OHMv1, sOHMv1, or wsOHM for OHMv2, sOHMv2, or gOHM
-    function migrate(
-        uint256 _amount,
-        TYPE _from,
-        TYPE _to
-    ) external;
 }
