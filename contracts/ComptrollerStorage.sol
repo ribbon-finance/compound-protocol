@@ -8,7 +8,7 @@ contract UnitrollerAdminStorage {
     /**
      * @notice Administrator for Fuse
      */
-    IFuseFeeDistributor internal constant fuseAdmin = IFuseFeeDistributor(0xC201B8c8dd22C779025E16F1825C90e1E6DD6A08);
+    IFuseFeeDistributor internal constant fuseAdmin = IFuseFeeDistributor(0x4AFB2B3DC111D091ca6C46C024d1d2f17BF477e1);
 
     /**
     * @notice Administrator for this contract
