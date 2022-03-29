@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./CErc20Delegate.sol";
 import "./EIP20Interface.sol";
-import "./IERC4626Draft.sol";
+import "./IERC4626.sol";
 
 /**
  * @title Rari's CErc20Plugin's Contract
@@ -18,7 +18,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
     /**
      * @notice Plugin address
      */
-    IERC4626Draft public plugin;
+    IERC4626 public plugin;
 
     uint256 constant public PRECISION = 1e18;
     
@@ -40,7 +40,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
             plugin.redeem(plugin.balanceOf(address(this)), address(this), address(this));
         }
 
-        plugin = IERC4626Draft(_plugin);
+        plugin = IERC4626(_plugin);
 
         EIP20Interface(underlying).approve(_plugin, uint256(-1));
 

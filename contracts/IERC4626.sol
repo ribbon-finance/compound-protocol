@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import {EIP20Interface} from "./EIP20Interface.sol";
 
-contract IERC4626Draft is EIP20Interface {
+contract IERC4626 is EIP20Interface {
     /*///////////////////////////////////////////////////////////////
                                 Events
     //////////////////////////////////////////////////////////////*/
