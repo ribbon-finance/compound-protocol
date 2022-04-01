@@ -19,7 +19,7 @@ interface RibbonMinter {
  */
 contract CErc20 is CToken, CErc20Interface {
     // Minter contract for rbn gauge emissions
-    RibbonMinter public constant rbnMinter = RibbonMinter(0x5B0655F938A72052c46d2e94D206ccB6FF625A3A);
+    RibbonMinter public constant RBN_MINTER = RibbonMinter(0x5B0655F938A72052c46d2e94D206ccB6FF625A3A);
     // RBN token
     IERC20Upgradeable public constant RBN = IERC20Upgradeable(0x6123b0049f904d730db3c36a31167d9d4121fa6b);
     // Rewards distributor
@@ -210,7 +210,7 @@ contract CErc20 is CToken, CErc20Interface {
         require(rewardsDistributor != address(0), "rewards distributor must be set");
 
         // Underlying is the gauge token like rETH-THETA-gauge
-        rbnMinter.mint(underlying)
+        RBN_MINTER.mint(underlying)
 
         /*
         * Transfer rewards to reward distributor which will distribute rewards
