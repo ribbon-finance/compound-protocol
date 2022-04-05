@@ -11,6 +11,10 @@ interface RibbonMinter {
   function mint(address gauge_addr) external;
 }
 
+interface RewardsDistributor {
+  function burn(uint256 amount) external;
+}
+
 /**
  * @title Compound's CErc20 Contract
  * @notice CTokens which wrap an EIP-20 underlying
@@ -24,7 +28,7 @@ contract CErc20 is CToken, CErc20Interface {
     IERC20Upgradeable public constant RBN = IERC20Upgradeable(0x6123b0049f904d730db3c36a31167d9d4121fa6b);
     // Rewards distributor
     // https://github.com/Rari-Capital/compound-protocol/blob/fuse-final/contracts/RewardsDistributorDelegator.sol
-    address public rewardsDistributor;
+    RewardsDistributor public rewardsDistributor;
 
     /**
      * @notice Initialize the new money market
@@ -212,6 +216,10 @@ contract CErc20 is CToken, CErc20Interface {
         // Underlying is the gauge token like rETH-THETA-gauge
         RBN_MINTER.mint(underlying)
 
+        uint256 toDistribute = RBN.balanceOf(address(this));
+
+        RBN.approve(rewardsDistributor, toDistribute)
+
         /*
         * Transfer rewards to reward distributor which will distribute rewards
         * to those who supply / borrow. The reason we need to do this way is
@@ -221,6 +229,7 @@ contract CErc20 is CToken, CErc20Interface {
         * gauge tokens as collateral who 'should' be getting those rewards, and some
         * to DAI / USDC suppliers
         */
-        RBN.transfer(rewardsDistributor, RBN.balanceOf(address(this)))
+        
+        rewardsDistributor.burn(toDistribute);
     }
 }
