@@ -1,7 +1,7 @@
 pragma solidity ^0.5.16;
 
 import "./CToken.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface CompLike {
   function delegate(address delegatee) external;
@@ -25,7 +25,7 @@ contract CErc20 is CToken, CErc20Interface {
     // Minter contract for rbn gauge emissions
     RibbonMinter public constant RBN_MINTER = RibbonMinter(0x5B0655F938A72052c46d2e94D206ccB6FF625A3A);
     // RBN token
-    IERC20Upgradeable public constant RBN = IERC20Upgradeable(0x6123b0049f904d730db3c36a31167d9d4121fa6b);
+    IERC20 public constant RBN = IERC20(0x6123b0049f904d730db3c36a31167d9d4121fa6b);
     // Rewards distributor
     // https://github.com/Rari-Capital/compound-protocol/blob/fuse-final/contracts/RewardsDistributorDelegator.sol
     RewardsDistributor public rewardsDistributor;
@@ -218,6 +218,10 @@ contract CErc20 is CToken, CErc20Interface {
 
         uint256 toDistribute = RBN.balanceOf(address(this));
 
+        if (toDistribute == 0) {
+          return;
+        }
+
         RBN.approve(rewardsDistributor, toDistribute)
 
         /*
@@ -229,7 +233,7 @@ contract CErc20 is CToken, CErc20Interface {
         * gauge tokens as collateral who 'should' be getting those rewards, and some
         * to DAI / USDC suppliers
         */
-        
+
         rewardsDistributor.burn(toDistribute);
     }
 }

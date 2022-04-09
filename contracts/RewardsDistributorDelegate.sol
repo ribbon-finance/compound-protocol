@@ -5,7 +5,7 @@ import "./ExponentialNoError.sol";
 import "./Comptroller.sol";
 import "./RewardsDistributorStorage.sol";
 import "./SafeMath.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title RewardsDistributorDelegate (COMP distribution logic extracted from `Comptroller`)
@@ -473,7 +473,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @notice Set borrower PCT
      */
     function _setBorrowerPCT(uint256 _borrowerPCT) public {
-        require(msg.sender == admin, "only admin can set comp speed");
+        require(msg.sender == admin, "only admin can set borrower percent");
         borrowerPCT = _borrowerPCT;
         supplierPCT = TOTAL_PCT.sub(_borrowerPCT);
     }
@@ -482,7 +482,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @notice Set new borrow / supply speed
      * @param cToken The market whose COMP speed to update
      */
-    function _updateSpeedWithNewEpoch(CToken cToken) public {
+    function updateSpeedWithNewEpoch(CToken cToken) external {
         require(block.timestamp.sub(startTime) >= WEEK, "Must be at least week since latest epoch");
         uint256 totalToDistribute = totalMint.sub(lastEpochTotalMint).div(AVG_BLOCKS_PER_WEEK);
         uint256 toDistributeToBorrower = toDistribute.mul(borrowerPCT).div(TOTAL_PCT);
@@ -496,8 +496,8 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @notice Burn
      * @param Takes in RBN tokens
      */
-    function burn(uint256 amount) public {
-        IERC20Upgradeable(rewardToken).transferFrom(msg.sender, address(this), amount);
+    function burn(uint256 amount) external {
+        IERC20(rewardToken).transferFrom(msg.sender, address(this), amount);
         totalMint = totalMint.add(amount);
     }
 
