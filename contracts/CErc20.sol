@@ -214,7 +214,7 @@ contract CErc20 is CToken, CErc20Interface {
         require(rewardsDistributor != address(0), "rewards distributor must be set");
 
         // Underlying is the gauge token like rETH-THETA-gauge
-        RBN_MINTER.mint(underlying)
+        RBN_MINTER.mint(underlying);
 
         uint256 toDistribute = RBN.balanceOf(address(this));
 
