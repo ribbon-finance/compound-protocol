@@ -488,8 +488,8 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         uint256 toDistributeToBorrower = toDistribute.mul(borrowerPCT).div(TOTAL_PCT);
         lastEpochTotalMint = totalMint;
         startTime = startTime.add(WEEK);
-        setCompSupplySpeedInternal(cToken, toDistributeToBorrower);
-        setCompBorrowSpeedInternal(cToken, toDistribute.sub(toDistributeToBorrower));
+        setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
+        setCompSupplySpeedInternal(cToken, toDistribute.sub(toDistributeToBorrower));
     }
 
     /**
