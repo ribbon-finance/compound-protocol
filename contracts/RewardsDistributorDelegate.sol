@@ -74,7 +74,6 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         require(rewardToken == address(0), "Already initialized.");
         require(_rewardToken != address(0), "Cannot initialize reward token to the zero address.");
         require(_startTime != 0, "Cannot initialize start time to the zero address.");
-        require(_borrowerPCT != 0, "Cannot initialize borrower PCT to the zero address.");
 
         rewardToken = _rewardToken;
         startTime = _startTime;
