@@ -222,7 +222,7 @@ contract CErc20 is CToken, CErc20Interface {
           return;
         }
 
-        RBN.approve(rewardsDistributor, toDistribute)
+        RBN.approve(rewardsDistributor, toDistribute);
 
         /*
         * Transfer rewards to reward distributor which will distribute rewards
