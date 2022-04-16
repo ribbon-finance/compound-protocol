@@ -202,7 +202,6 @@ contract CErc20 is CToken, CErc20Interface {
     */
     function _setRewardsDistributor(address _rewardsDistributor) external {
         require(hasAdminRights(), "only the admin may set the rewards distributor delegate");
-        require(_rewardsDistributor != address(0), "rewards distributor must be set");
 
         rewardsDistributor = _rewardsDistributor;
     }
