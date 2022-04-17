@@ -482,7 +482,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @notice Set average block time. Each block will be exactly 12 seconds after merge
      */
     function _setAvgBlocksPerWeek(uint256 _avgBlocksPerWeek) public {
-        require(msg.sender == admin, "only admin can set avg block time");
+        require(msg.sender == admin, "only admin can set avg blocks per week");
         avgBlocksPerWeek = _avgBlocksPerWeek;
     }
 
