@@ -5,7 +5,7 @@ import "./ExponentialNoError.sol";
 import "./Comptroller.sol";
 import "./RewardsDistributorStorage.sol";
 import "./SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./EIP20Interface.sol";
 
 /**
  * @title RewardsDistributorDelegate (COMP distribution logic extracted from `Comptroller`)
@@ -496,7 +496,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @param Takes in RBN tokens
      */
     function burn(uint256 amount) external {
-        IERC20(rewardToken).transferFrom(msg.sender, address(this), amount);
+        EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
         totalMint = totalMint.add(amount);
     }
 
