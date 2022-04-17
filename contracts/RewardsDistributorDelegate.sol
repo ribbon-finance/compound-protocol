@@ -488,7 +488,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         lastEpochTotalMint = totalMint;
         startTime = startTime.add(WEEK);
         setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
-        setCompSupplySpeedInternal(cToken, toDistribute.sub(toDistributeToBorrower));
+        setCompSupplySpeedInternal(cToken, totalToDistribute.sub(toDistributeToBorrower));
     }
 
     /**
