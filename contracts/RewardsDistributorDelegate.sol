@@ -20,9 +20,6 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     /// @dev WEEK
     uint256 public constant WEEK = 604800;
 
-    /// @dev AVG blocks per week. Each block is on avg 13s
-    uint256 public constant AVG_BLOCKS_PER_WEEK = WEEK.div(13);
-
     /// @dev 100%
     uint256 public constant TOTAL_PCT = 10000;
 
@@ -40,6 +37,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
 
     /// @dev Supply reward %
     uint256 public supplierPCT;
+
+    /// @dev AVG blocks per week. Each block is on avg 13s = WEEK / 13
+    uint256 public avgBlocksPerWeek;
 
     /// @notice Emitted when pendingAdmin is changed
     event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
@@ -79,6 +79,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         startTime = _startTime;
         borrowerPCT = _borrowerPCT;
         supplierPCT = TOTAL_PCT.sub(_borrowerPCT);
+        avgBlocksPerWeek = WEEK.div(13);
     }
 
     /*** Set Admin ***/
@@ -476,6 +477,15 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         borrowerPCT = _borrowerPCT;
         supplierPCT = TOTAL_PCT.sub(_borrowerPCT);
     }
+
+    /**
+     * @notice Set average block time. Each block will be exactly 12 seconds after merge
+     */
+    function _setAvgBlocksPerWeek(uint256 _avgBlocksPerWeek) public {
+        require(msg.sender == admin, "only admin can set avg block time");
+        avgBlocksPerWeek = _avgBlocksPerWeek;
+    }
+
 
     /**
      * @notice Set new borrow / supply speed

@@ -25,7 +25,7 @@ contract CErc20 is CToken, CErc20Interface {
     // Minter contract for rbn gauge emissions
     RibbonMinter public constant RBN_MINTER = RibbonMinter(0x5B0655F938A72052c46d2e94D206ccB6FF625A3A);
     // RBN token
-    EIP20Interface public constant RBN = EIP20Interface(0x6123b0049f904d730db3c36a31167d9d4121fa6b);
+    EIP20Interface public constant RBN = EIP20Interface(0x6123B0049F904d730dB3C36a31167D9d4121fA6B);
     // Rewards distributor
     // https://github.com/Rari-Capital/compound-protocol/blob/fuse-final/contracts/RewardsDistributorDelegator.sol
     RewardsDistributor public rewardsDistributor;
@@ -204,7 +204,7 @@ contract CErc20 is CToken, CErc20Interface {
         require(hasAdminRights(), "only the admin may set the rewards distributor delegate");
 	require(_rewardsDistributor != address(0), "rewards distributor must be set");
 
-        rewardsDistributor = _rewardsDistributor;
+        rewardsDistributor = RewardsDistributor(_rewardsDistributor);
     }
 
     /**
@@ -222,7 +222,7 @@ contract CErc20 is CToken, CErc20Interface {
           return;
         }
 
-        RBN.approve(rewardsDistributor, toDistribute);
+        RBN.approve(address(rewardsDistributor), toDistribute);
 
         /*
         * Transfer rewards to reward distributor which will distribute rewards
