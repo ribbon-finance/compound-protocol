@@ -211,7 +211,7 @@ contract CErc20 is CToken, CErc20Interface {
     * @notice Anyone can claim gauge rewards for collateralized gauge tokens.
     */
     function claimGaugeRewards() external {
-        require(rewardsDistributor != address(0), "rewards distributor must be set");
+        require(address(rewardsDistributor) != address(0), "rewards distributor must be set");
 
         // Underlying is the gauge token like rETH-THETA-gauge
         RBN_MINTER.mint(underlying);
