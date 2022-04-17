@@ -484,7 +484,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     function updateSpeedWithNewEpoch(CToken cToken) external {
         require(block.timestamp.sub(startTime) >= WEEK, "Must be at least week since latest epoch");
         uint256 totalToDistribute = totalMint.sub(lastEpochTotalMint).div(AVG_BLOCKS_PER_WEEK);
-        uint256 toDistributeToBorrower = toDistribute.mul(borrowerPCT).div(TOTAL_PCT);
+        uint256 toDistributeToBorrower = totalToDistribute.mul(borrowerPCT).div(TOTAL_PCT);
         lastEpochTotalMint = totalMint;
         startTime = startTime.add(WEEK);
         setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
@@ -493,7 +493,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
 
     /**
      * @notice Burn
-     * @param Takes in RBN tokens
+     * @param amount Amount of RBN tokens
      */
     function burn(uint256 amount) external {
         EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
