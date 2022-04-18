@@ -471,8 +471,19 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      */
     function _setBorrowerPCT(CToken cToken, uint256 _borrowerPCT) public {
       require(msg.sender == admin, "only admin can set borrower percent");
+      require(borrowerPCT[address(cToken)].add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
       borrowerPCT[address(cToken)] = _borrowerPCT;
-      supplierPCT[address(cToken)] = TOTAL_PCT.sub(_borrowerPCT);
+    }
+
+    /**
+     * @notice Set supply PCT
+     * @param cToken The market whose borrower PCT to update
+     * @param _supplierPCT Supplier PCT
+     */
+    function _setSupplierPCT(CToken cToken, uint256 _supplierPCT) public {
+      require(msg.sender == admin, "only admin can set supplier percent");
+      require(borrowerPCT[address(cToken)].add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
+      supplierPCT[address(cToken)] = _supplierPCT;
     }
 
     /**
@@ -498,12 +509,15 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
       uint256 toDistributeToBorrower = totalToDistribute.mul(borrowerPCT[address(cToken)]).div(
         TOTAL_PCT
       );
+      uint256 toDistributeToSupplier = totalToDistribute.mul(supplierPCT[address(cToken)]).div(
+        TOTAL_PCT
+      );
       lastEpochTotalMint[address(cToken)] = totalMint[address(cToken)];
       startTime = startTime.add(WEEK);
       setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
       setCompSupplySpeedInternal(
         cToken,
-        totalToDistribute.sub(toDistributeToBorrower)
+        toDistributeToSupplier
       );
     }
 
