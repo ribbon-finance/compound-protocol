@@ -26,20 +26,17 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     /// @dev Start of rewards epoch
     uint256 public startTime;
 
-    /// @dev total RBN minted from last epoch
-    uint256 public lastEpochTotalMint;
-
-    /// @dev total RBN minted
-    uint256 public totalMint;
-
-    /// @dev Borrow reward %
-    uint256 public borrowerPCT;
-
-    /// @dev Supply reward %
-    uint256 public supplierPCT;
-
     /// @dev AVG blocks per week. Each block is on avg 13s = WEEK / 13
     uint256 public avgBlocksPerWeek;
+
+    /// @dev total RBN minted
+    mapping(address => uint256) public totalMint;
+    /// @dev total RBN minted from last epoch
+    mapping(address => uint256) public lastEpochTotalMint;
+    /// @dev Borrow reward %
+    mapping(address => uint256) public borrowerPCT;
+    /// @dev Supply reward %
+    mapping(address => uint256) public supplierPCT;
 
     /// @notice Emitted when pendingAdmin is changed
     event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
@@ -69,7 +66,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     uint224 public constant compInitialIndex = 1e36;
 
     /// @dev Intitializer to set admin to caller and set reward token and start time of rewards
-    function initialize(address _rewardToken, uint256 _startTime, uint256 _borrowerPCT) external {
+    function initialize(address _rewardToken, uint256 _startTime) external {
         require(msg.sender == admin, "Only admin can initialize.");
         require(rewardToken == address(0), "Already initialized.");
         require(_rewardToken != address(0), "Cannot initialize reward token to the zero address.");
@@ -77,8 +74,6 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
 
         rewardToken = _rewardToken;
         startTime = _startTime;
-        borrowerPCT = _borrowerPCT;
-        supplierPCT = TOTAL_PCT.sub(_borrowerPCT);
         avgBlocksPerWeek = WEEK.div(13);
     }
 
@@ -471,11 +466,13 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
 
     /**
      * @notice Set borrower PCT
+     * @param cToken The market whose borrower PCT to update
+     * @param _borrowerPCT Borrower PCT
      */
-    function _setBorrowerPCT(uint256 _borrowerPCT) public {
-        require(msg.sender == admin, "only admin can set borrower percent");
-        borrowerPCT = _borrowerPCT;
-        supplierPCT = TOTAL_PCT.sub(_borrowerPCT);
+    function _setBorrowerPCT(CToken cToken, uint256 _borrowerPCT) public {
+      require(msg.sender == admin, "only admin can set borrower percent");
+      borrowerPCT[address(cToken)] = _borrowerPCT;
+      supplierPCT[address(cToken)] = TOTAL_PCT.sub(_borrowerPCT);
     }
 
     /**
@@ -486,28 +483,38 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         avgBlocksPerWeek = _avgBlocksPerWeek;
     }
 
-
     /**
      * @notice Set new borrow / supply speed
      * @param cToken The market whose COMP speed to update
      */
     function updateSpeedWithNewEpoch(CToken cToken) external {
-        require(block.timestamp.sub(startTime) >= WEEK, "Must be at least week since latest epoch");
-        uint256 totalToDistribute = totalMint.sub(lastEpochTotalMint).div(avgBlocksPerWeek);
-        uint256 toDistributeToBorrower = totalToDistribute.mul(borrowerPCT).div(TOTAL_PCT);
-        lastEpochTotalMint = totalMint;
-        startTime = startTime.add(WEEK);
-        setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
-        setCompSupplySpeedInternal(cToken, totalToDistribute.sub(toDistributeToBorrower));
+      require(
+        block.timestamp.sub(startTime) >= WEEK,
+        "Must be at least week since latest epoch"
+      );
+      uint256 totalToDistribute = totalMint[address(cToken)].sub(lastEpochTotalMint[address(cToken)]).div(
+        avgBlocksPerWeek
+      );
+      uint256 toDistributeToBorrower = totalToDistribute.mul(borrowerPCT[address(cToken)]).div(
+        TOTAL_PCT
+      );
+      lastEpochTotalMint[address(cToken)] = totalMint[address(cToken)];
+      startTime = startTime.add(WEEK);
+      setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
+      setCompSupplySpeedInternal(
+        cToken,
+        totalToDistribute.sub(toDistributeToBorrower)
+      );
     }
 
     /**
      * @notice Burn
+     * @param cToken cToken to burn for
      * @param amount Amount of RBN tokens
      */
-    function burn(uint256 amount) external {
-        EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
-        totalMint = totalMint.add(amount);
+    function burn(CToken cToken, uint256 amount) external {
+      EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
+      totalMint[address(cToken)] = totalMint[address(cToken)].add(amount);
     }
 
     /**

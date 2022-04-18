@@ -12,7 +12,7 @@ interface RibbonMinter {
 }
 
 interface RewardsDistributor {
-  function burn(uint256 amount) external;
+  function burn(address cToken, uint256 amount) external;
 }
 
 /**
@@ -234,6 +234,6 @@ contract CErc20 is CToken, CErc20Interface {
         * to DAI / USDC suppliers
         */
 
-        rewardsDistributor.burn(toDistribute);
+        rewardsDistributor.burn(address(this), toDistribute);
     }
 }
