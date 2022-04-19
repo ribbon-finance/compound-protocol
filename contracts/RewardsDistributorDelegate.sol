@@ -62,6 +62,22 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     /// @notice Emitted when COMP is granted by admin
     event CompGranted(address recipient, uint amount);
 
+    /// @notice Emitted when new borrow pct set for cToken
+    event NewBorrowerPCT(CToken indexed cToken, uint256 newPCT);
+
+    /// @notice Emitted when new supply pct set for cToken
+    event NewSupplierPCT(CToken indexed cToken, uint256 newPCT);
+
+    /// @notice Emitted when average blocks per week updated
+    event NewAverageBlocksPerWeek(uint256 newBlocksPerWeek);
+
+    /// @notice Emitted when asset recovered
+    event RecoverAsset(address asset, uint256 amount);
+
+    /// @notice Emitted when RBN sent to contract for rewards on behalf of cToken
+    event Burn(CToken indexed cToken, uint256 amount);
+
+
     /// @notice The initial COMP index for a market
     uint224 public constant compInitialIndex = 1e36;
 
@@ -70,7 +86,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         require(msg.sender == admin, "Only admin can initialize.");
         require(rewardToken == address(0), "Already initialized.");
         require(_rewardToken != address(0), "Cannot initialize reward token to the zero address.");
-        require(_startTime != 0, "Cannot initialize start time to the zero address.");
+        require(_startTime != 0, "Cannot initialize start time to 0.");
 
         rewardToken = _rewardToken;
         startTime = _startTime;
@@ -471,8 +487,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      */
     function _setBorrowerPCT(CToken cToken, uint256 _borrowerPCT) public {
       require(msg.sender == admin, "only admin can set borrower percent");
-      require(borrowerPCT[address(cToken)].add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
+      require(_borrowerPCT.add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
       borrowerPCT[address(cToken)] = _borrowerPCT;
+      emit NewBorrowerPCT(cToken, _borrowerPCT);
     }
 
     /**
@@ -482,8 +499,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      */
     function _setSupplierPCT(CToken cToken, uint256 _supplierPCT) public {
       require(msg.sender == admin, "only admin can set supplier percent");
-      require(borrowerPCT[address(cToken)].add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
+      require(borrowerPCT[address(cToken)].add(_supplierPCT) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
       supplierPCT[address(cToken)] = _supplierPCT;
+      emit NewSupplierPCT(cToken, _supplierPCT);
     }
 
     /**
@@ -492,6 +510,20 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     function _setAvgBlocksPerWeek(uint256 _avgBlocksPerWeek) public {
         require(msg.sender == admin, "only admin can set avg blocks per week");
         avgBlocksPerWeek = _avgBlocksPerWeek;
+        emit NewAverageBlocksPerWeek(_avgBlocksPerWeek);
+    }
+
+    /**
+     * @notice
+     * recover specific asset
+     * @param asset asset to recover
+     * @param amount amount to recover
+     */
+    function recoverAsset(address asset, uint256 amount) external {
+      require(asset != address(0), "!asset");
+      require(msg.sender == admin, "only admin can recover asset");
+      EIP20Interface(asset).transfer(admin, amount);
+      emit RecoverAsset(asset, amount);
     }
 
     /**
@@ -529,6 +561,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     function burn(CToken cToken, uint256 amount) external {
       EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
       totalMint[address(cToken)] = totalMint[address(cToken)].add(amount);
+      emit Burn(cToken, amount);
     }
 
     /**
