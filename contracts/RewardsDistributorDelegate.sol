@@ -519,7 +519,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @param asset asset to recover
      * @param amount amount to recover
      */
-    function recoverAsset(address asset, uint256 amount) external {
+    function _recoverAsset(address asset, uint256 amount) public {
       require(asset != address(0), "!asset");
       require(msg.sender == admin, "only admin can recover asset");
       EIP20Interface(asset).transfer(admin, amount);
