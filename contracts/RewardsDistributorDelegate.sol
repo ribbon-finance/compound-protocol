@@ -24,7 +24,7 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     uint256 public constant TOTAL_PCT = 10000;
 
     /// @dev Start of rewards epoch
-    uint256 public startTime;
+    uint256 public start;
 
     /// @dev AVG blocks per week. Each block is on avg 13s = WEEK / 13
     uint256 public avgBlocksPerWeek;
@@ -37,6 +37,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     mapping(address => uint256) public borrowerPCT;
     /// @dev Supply reward %
     mapping(address => uint256) public supplierPCT;
+
+    mapping(address => uint256) public startTime;
+    CToken[] public stables;
 
     /// @notice Emitted when pendingAdmin is changed
     event NewPendingAdmin(address oldPendingAdmin, address newPendingAdmin);
@@ -71,6 +74,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     /// @notice Emitted when average blocks per week updated
     event NewAverageBlocksPerWeek(uint256 newBlocksPerWeek);
 
+    /// @notice Emitted when new stables reward asset added
+    event NewStableCToken(CToken indexed cToken);
+
     /// @notice Emitted when asset recovered
     event RecoverAsset(address asset, uint256 amount);
 
@@ -82,14 +88,14 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
     uint224 public constant compInitialIndex = 1e36;
 
     /// @dev Intitializer to set admin to caller and set reward token and start time of rewards
-    function initialize(address _rewardToken, uint256 _startTime) external {
+    function initialize(address _rewardToken, uint256 _start) external {
         require(msg.sender == admin, "Only admin can initialize.");
         require(rewardToken == address(0), "Already initialized.");
         require(_rewardToken != address(0), "Cannot initialize reward token to the zero address.");
-        require(_startTime != 0, "Cannot initialize start time to 0.");
+        require(_start != 0, "Cannot initialize start time to 0.");
 
         rewardToken = _rewardToken;
-        startTime = _startTime;
+        start = _start;
         avgBlocksPerWeek = WEEK.div(13);
     }
 
@@ -486,6 +492,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @param _borrowerPCT Borrower PCT
      */
     function _setBorrowerPCT(CToken cToken, uint256 _borrowerPCT) public {
+      if(startTime[address(cToken)] == 0){
+        startTime[address(cToken)] = start;
+      }
       require(msg.sender == admin, "only admin can set borrower percent");
       require(_borrowerPCT.add(supplierPCT[address(cToken)]) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
       borrowerPCT[address(cToken)] = _borrowerPCT;
@@ -498,6 +507,9 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @param _supplierPCT Supplier PCT
      */
     function _setSupplierPCT(CToken cToken, uint256 _supplierPCT) public {
+      if(startTime[address(cToken)] == 0){
+        startTime[address(cToken)] = start;
+      }
       require(msg.sender == admin, "only admin can set supplier percent");
       require(borrowerPCT[address(cToken)].add(_supplierPCT) <= TOTAL_PCT, "Borrow + Supply PCT > 100%");
       supplierPCT[address(cToken)] = _supplierPCT;
@@ -511,6 +523,21 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
         require(msg.sender == admin, "only admin can set avg blocks per week");
         avgBlocksPerWeek = _avgBlocksPerWeek;
         emit NewAverageBlocksPerWeek(_avgBlocksPerWeek);
+    }
+
+    /**
+     * @notice Add Stables Asset
+     */
+    function _addStable(CToken cToken) public {
+      require(msg.sender == admin, "only admin can add stable asset for rewards");
+      uint256 len = stables.length;
+      for (uint256 i; i < len; i++) {
+        if(stables[i] == cToken){
+          return;
+        }
+      }
+      stables.push(cToken);
+      emit NewStableCToken(cToken);
     }
 
     /**
@@ -532,36 +559,59 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      */
     function updateSpeedWithNewEpoch(CToken cToken) external {
       require(
-        block.timestamp.sub(startTime) >= WEEK,
+        block.timestamp.sub(startTime[address(cToken)]) >= WEEK,
         "Must be at least week since latest epoch"
       );
-      uint256 totalToDistribute = totalMint[address(cToken)].sub(lastEpochTotalMint[address(cToken)]).div(
-        avgBlocksPerWeek
-      );
-      uint256 toDistributeToBorrower = totalToDistribute.mul(borrowerPCT[address(cToken)]).div(
-        TOTAL_PCT
-      );
-      uint256 toDistributeToSupplier = totalToDistribute.mul(supplierPCT[address(cToken)]).div(
-        TOTAL_PCT
-      );
+      uint256 totalToDistribute = totalMint[address(cToken)]
+        .sub(lastEpochTotalMint[address(cToken)])
+        .div(avgBlocksPerWeek);
+      uint256 toDistributeToBorrower = totalToDistribute
+        .mul(borrowerPCT[address(cToken)])
+        .div(TOTAL_PCT);
+      uint256 toDistributeToSupplier = totalToDistribute
+        .mul(supplierPCT[address(cToken)])
+        .div(TOTAL_PCT);
       lastEpochTotalMint[address(cToken)] = totalMint[address(cToken)];
-      startTime = startTime.add(WEEK);
+      startTime[address(cToken)] = startTime[address(cToken)].add(WEEK);
       setCompBorrowSpeedInternal(cToken, toDistributeToBorrower);
-      setCompSupplySpeedInternal(
-        cToken,
-        toDistributeToSupplier
-      );
+      setCompSupplySpeedInternal(cToken, toDistributeToSupplier);
     }
 
     /**
      * @notice Burn
      * @param cToken cToken to burn for
      * @param amount Amount of RBN tokens
+     * @param burnStables Are we burning some RBN for stables rewards
      */
-    function burn(CToken cToken, uint256 amount) external {
+    function burn(CToken cToken, uint256 amount, bool burnStables) external {
       EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
+
       totalMint[address(cToken)] = totalMint[address(cToken)].add(amount);
+
+      if(burnStables){
+        _burnStables(cToken, amount);
+      }
+
       emit Burn(cToken, amount);
+    }
+
+    /**
+     * @notice Burn Stables
+     * @param cToken cToken that sources rewards
+     * @param amount Amount of RBN tokens
+     */
+    function _burnStables(CToken cToken, uint256 amount) internal {
+      uint256 len = stables.length;
+      uint256 amountForStablesTotal = amount.mul(TOTAL_PCT.sub(supplierPCT[address(cToken)]).sub(borrowerPCT[address(cToken)])).div(TOTAL_PCT);
+
+      if(len > 0 && amountForStablesTotal > 0){
+        uint256 amountForStable = amountForStablesTotal.div(len);
+        for (uint256 i; i < len; i++) {
+          CToken stable = stables[i];
+          totalMint[address(stable)] = totalMint[address(stable)].add(amountForStable);
+          emit Burn(stable, amountForStable);
+        }
+      }
     }
 
     /**
