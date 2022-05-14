@@ -584,6 +584,8 @@ contract RewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, Expo
      * @param burnStables Are we burning some RBN for stables rewards
      */
     function burn(CToken cToken, uint256 amount, bool burnStables) external {
+      require(amount > 0, "!amount > 0");
+      
       EIP20Interface(rewardToken).transferFrom(msg.sender, address(this), amount);
 
       totalMint[address(cToken)] = totalMint[address(cToken)].add(amount);
