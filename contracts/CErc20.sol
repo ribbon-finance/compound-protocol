@@ -1,9 +1,18 @@
 pragma solidity ^0.5.16;
 
 import "./CToken.sol";
+import "./EIP20Interface.sol";
 
 interface CompLike {
   function delegate(address delegatee) external;
+}
+
+interface RibbonMinter {
+  function mint(address gauge_addr) external;
+}
+
+interface RewardsDistributor {
+  function burn(address cToken, uint256 amount, bool burnStables) external;
 }
 
 /**
@@ -13,6 +22,14 @@ interface CompLike {
  * @author Compound
  */
 contract CErc20 is CToken, CErc20Interface {
+    // Minter contract for rbn gauge emissions
+    RibbonMinter public constant RBN_MINTER = RibbonMinter(0x5B0655F938A72052c46d2e94D206ccB6FF625A3A);
+    // RBN token
+    EIP20Interface public constant RBN = EIP20Interface(0x6123B0049F904d730dB3C36a31167D9d4121fA6B);
+    // Rewards distributor
+    // https://github.com/Rari-Capital/compound-protocol/blob/fuse-final/contracts/RewardsDistributorDelegator.sol
+    RewardsDistributor public rewardsDistributor;
+
     /**
      * @notice Initialize the new money market
      * @param underlying_ The address of the underlying asset
@@ -177,5 +194,46 @@ contract CErc20 is CToken, CErc20Interface {
     function _delegateCompLikeTo(address compLikeDelegatee) external {
         require(hasAdminRights(), "only the admin may set the comp-like delegate");
         CompLike(underlying).delegate(compLikeDelegatee);
+    }
+
+    /**
+    * @notice Admin call to set rewards distributor
+    * @param _rewardsDistributor The rewards contract
+    */
+    function _setRewardsDistributor(address _rewardsDistributor) external {
+        require(hasAdminRights(), "only the admin may set the rewards distributor delegate");
+	require(_rewardsDistributor != address(0), "rewards distributor must be set");
+
+        rewardsDistributor = RewardsDistributor(_rewardsDistributor);
+    }
+
+    /**
+    * @notice Anyone can claim gauge rewards for collateralized gauge tokens.
+    */
+    function claimGaugeRewards() external {
+        require(address(rewardsDistributor) != address(0), "rewards distributor must be set");
+
+        // Underlying is the gauge token like rETH-THETA-gauge
+        RBN_MINTER.mint(underlying);
+
+        uint256 toDistribute = RBN.balanceOf(address(this));
+
+        if (toDistribute == 0) {
+          return;
+        }
+
+        RBN.approve(address(rewardsDistributor), toDistribute);
+
+        /*
+        * Transfer rewards to reward distributor which will distribute rewards
+        * to those who supply / borrow. The reason we need to do this way is
+        * once individuals transfer the collateral (gauge tokens) to the cToken
+        * contract, they forfeit their rewards and now the cToken starts accumulating
+        * rewards. We want to redistribute some of it back to those supplying
+        * gauge tokens as collateral who 'should' be getting those rewards, and some
+        * to DAI / USDC suppliers
+        */
+
+        rewardsDistributor.burn(address(this), toDistribute, true);
     }
 }
